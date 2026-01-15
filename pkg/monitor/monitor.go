@@ -446,7 +446,7 @@ func (m *Monitor) checkScanner(infos []MaintainerInfo) {
 			continue
 		}
 		for k, v := range scanner {
-			if v.ScannerHeightDiff < 10 {
+			if v.ScannerHeightDiff < m.Cfg.Tss.ScannerGap {
 				continue
 			}
 			util.Alarm(context.Background(),

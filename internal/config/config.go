@@ -76,6 +76,7 @@ type From struct {
 
 type Tss struct {
 	Maintainer string `json:"maintainer"`
+	ScannerGap int64  `json:"scannerGap"`
 }
 
 func (c *Config) validate() error {
