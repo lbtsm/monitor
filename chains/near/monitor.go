@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/mapprotocol/monitor/internal/chain"
 	"github.com/mapprotocol/monitor/internal/config"
 	"github.com/mapprotocol/monitor/internal/mapprotocol"
 	"github.com/mapprotocol/monitor/pkg/util"
@@ -78,14 +79,18 @@ func (m *Monitor) sync() error {
 					m.heightTimestamp = time.Now().Unix()
 				}
 				if (time.Now().Unix() - m.heightTimestamp) > changeInterval.Int64() {
-					time.Sleep(time.Second * 30)
+					if !chain.SleepWithStop(m.stop, time.Second*30) {
+						return errors.New("polling terminated")
+					}
 					// alarm
 					util.Alarm(context.Background(),
 						fmt.Sprintf("Near2Map height in %d seconds no change, height=%d", changeInterval.Int64(), m.syncedHeight.Uint64()))
 				}
 			}
 
-			time.Sleep(config.BalanceRetryInterval)
+			if !chain.SleepWithStop(m.stop, config.BalanceRetryInterval) {
+				return errors.New("polling terminated")
+			}
 		}
 	}
 }
@@ -94,7 +99,7 @@ func (m *Monitor) checkBalance(addr string, waterLine *big.Int, chainName string
 	resp, err := m.conn.Client().AccountView(context.Background(), addr, block.FinalityFinal())
 	if err != nil {
 		m.log.Error("Unable to get user balance failed", "from", addr, "err", err)
-		time.Sleep(config.RetryLongInterval)
+		chain.SleepWithStop(m.stop, config.RetryLongInterval)
 		return
 	}
 

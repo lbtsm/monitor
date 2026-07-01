@@ -2,6 +2,7 @@ package chain
 
 import (
 	"sync"
+	"time"
 
 	"github.com/ChainSafe/log15"
 	"github.com/mapprotocol/monitor/internal/config"
@@ -73,4 +74,18 @@ func (c *Common) UpdateCfg(fn func(*config.OptConfig)) {
 // connection can be torn down without racing the polling loop.
 func (c *Common) Wait() {
 	c.Wg.Wait()
+}
+
+// SleepWithStop waits for d unless stop is closed first. It returns false
+// when the caller should stop work immediately.
+func SleepWithStop(stop <-chan int, d time.Duration) bool {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-stop:
+		return false
+	case <-timer.C:
+		return true
+	}
 }

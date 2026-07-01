@@ -12,7 +12,6 @@ import (
 	"math/big"
 	"strconv"
 	"strings"
-	"time"
 )
 
 var (
@@ -88,7 +87,9 @@ func (m *Monitor) sync() error {
 				m.checkToken(ct.Address, ct.Tokens)
 			}
 
-			time.Sleep(config.BalanceRetryInterval)
+			if !chain.SleepWithStop(m.Stop, config.BalanceRetryInterval) {
+				return errors.New("polling terminated")
+			}
 		}
 	}
 }
