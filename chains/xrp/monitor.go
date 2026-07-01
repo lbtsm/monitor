@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	"github.com/lbtsm/xrpl-go/model/client/account"
 	"github.com/lbtsm/xrpl-go/model/transactions/types"
@@ -81,7 +80,9 @@ func (m *Monitor) sync() error {
 					m.checkBalance(addr, ele.Group, wl, false)
 				}
 			}
-			time.Sleep(config.BalanceRetryInterval)
+			if !chain.SleepWithStop(m.Stop, config.BalanceRetryInterval) {
+				return errors.New("polling terminated")
+			}
 		}
 	}
 }

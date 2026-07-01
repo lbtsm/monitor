@@ -123,7 +123,9 @@ func (m *Monitor) sync() error {
 				m.OtherChainCheck()
 			}
 
-			time.Sleep(config.BalanceRetryInterval)
+			if !chain.SleepWithStop(m.Stop, config.BalanceRetryInterval) {
+				return errors.New("polling terminated")
+			}
 		}
 	}
 }
@@ -144,7 +146,7 @@ func (m *Monitor) reportUser() {
 		balance, err := m.Conn.Client().BalanceAt(context.Background(), common.HexToAddress(addr), nil)
 		if err != nil {
 			m.Log.Error("Unable to get user balance failed", "from", addr, "err", err)
-			time.Sleep(config.RetryLongInterval)
+			chain.SleepWithStop(m.Stop, config.RetryLongInterval)
 			return
 		}
 
@@ -169,7 +171,7 @@ func (m *Monitor) checkBalance(addr common.Address, waterLine *big.Int, group st
 	balance, err := m.Conn.Client().BalanceAt(context.Background(), addr, nil)
 	if err != nil {
 		m.Log.Error("Unable to get user balance failed", "from", addr, "err", err)
-		time.Sleep(config.RetryLongInterval)
+		chain.SleepWithStop(m.Stop, config.RetryLongInterval)
 		return
 	}
 
@@ -263,7 +265,9 @@ func (m *Monitor) mapCheck() {
 			util.Alarm(context.Background(), fmt.Sprintf("check brc20 balance token=%s, bridgeBal=%d, contractAmount=%v",
 				m.Cfg.Tk.Token[idx], afterBridgeBal, contractAmount))
 		}
-		time.Sleep(time.Second)
+		if !chain.SleepWithStop(m.Stop, time.Second) {
+			return
+		}
 	}
 
 	if m.Cfg.Tss != nil {
@@ -507,7 +511,7 @@ func (m *Monitor) nativeCheck(contract string) {
 	if btcSrcAfter < (contractAmount.Int64()) {
 		util.Alarm(context.Background(), fmt.Sprintf("check brc20 balance token=btc, bridgeBal=%d, contractAmount=%v", btcSrcAfter, contractAmount))
 	}
-	time.Sleep(time.Second)
+	chain.SleepWithStop(m.Stop, time.Second)
 }
 
 func (m *Monitor) OtherChainCheck() {

@@ -1,11 +1,13 @@
 package eth
 
 import (
+	"sync"
+
 	"github.com/ChainSafe/log15"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/mapprotocol/monitor/internal/chain"
 	"github.com/mapprotocol/monitor/internal/config"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/mapprotocol/monitor/pkg/ethereum"
 	"github.com/mapprotocol/monitor/pkg/monitor"
 )
@@ -15,6 +17,8 @@ type Chain struct {
 	conn   chain.Connection    // The chains connection
 	stop   chan<- int
 	listen chain.Listener // The listener of this chain
+	stopOnce sync.Once
+	stopped  chan struct{}
 }
 
 func InitializeChain(chainCfg *config.ChainConfig, logger log15.Logger, sysErr chan<- error, tks *config.Token,
@@ -42,6 +46,7 @@ func InitializeChain(chainCfg *config.ChainConfig, logger log15.Logger, sysErr c
 		conn:   conn,
 		stop:   stop,
 		listen: listen,
+		stopped: make(chan struct{}),
 	}, nil
 }
 
@@ -66,11 +71,15 @@ func (c *Chain) Name() string {
 // Stop signals running routines to exit, waits for them, then tears down
 // the underlying connection.
 func (c *Chain) Stop() {
-	close(c.stop)
-	c.listen.Wait()
-	if c.conn != nil {
-		c.conn.Close()
-	}
+	c.stopOnce.Do(func() {
+		defer close(c.stopped)
+		close(c.stop)
+		c.listen.Wait()
+		if c.conn != nil {
+			c.conn.Close()
+		}
+	})
+	<-c.stopped
 }
 
 // Conn return Connection interface for relayer register

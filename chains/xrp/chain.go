@@ -1,6 +1,8 @@
 package xrp
 
 import (
+	"sync"
+
 	"github.com/ChainSafe/log15"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/mapprotocol/monitor/internal/chain"
@@ -11,6 +13,7 @@ type Chain struct {
 	cfg    *config.ChainConfig // The config of the chain
 	stop   chan<- int
 	listen chain.Listener
+	once   sync.Once
 }
 
 func New(chainCfg *config.ChainConfig, logger log15.Logger, sysErr chan<- error, tks *config.Token,
@@ -55,8 +58,10 @@ func (c *Chain) Start() error {
 }
 
 func (c *Chain) Stop() {
-	close(c.stop)
-	c.listen.Wait()
+	c.once.Do(func() {
+		close(c.stop)
+		c.listen.Wait()
+	})
 }
 
 func (c *Chain) Id() config.ChainId {

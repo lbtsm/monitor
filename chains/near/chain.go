@@ -1,6 +1,8 @@
 package near
 
 import (
+	"sync"
+
 	"github.com/ChainSafe/log15"
 	"github.com/mapprotocol/monitor/internal/chain"
 	"github.com/mapprotocol/monitor/internal/config"
@@ -13,6 +15,8 @@ type Chain struct {
 	conn   *Connection         // The chains connection
 	stop   chan<- int
 	listen chain.Listener // The listener of this chain
+	stopOnce sync.Once
+	stopped  chan struct{}
 }
 
 func InitializeChain(chainCfg *config.ChainConfig, logger log15.Logger, sysErr chan<- error) (*Chain, error) {
@@ -43,6 +47,7 @@ func InitializeChain(chainCfg *config.ChainConfig, logger log15.Logger, sysErr c
 		conn:   conn,
 		stop:   stop,
 		listen: listen,
+		stopped: make(chan struct{}),
 	}, nil
 }
 
@@ -66,11 +71,15 @@ func (c *Chain) Name() string {
 // Stop signals running routines to exit, waits for them, then tears down
 // the underlying connection.
 func (c *Chain) Stop() {
-	close(c.stop)
-	c.listen.Wait()
-	if c.conn != nil {
-		c.conn.Close()
-	}
+	c.stopOnce.Do(func() {
+		defer close(c.stopped)
+		close(c.stop)
+		c.listen.Wait()
+		if c.conn != nil {
+			c.conn.Close()
+		}
+	})
+	<-c.stopped
 }
 
 // EthClient return EthClient for global map connection

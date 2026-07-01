@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
-	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/lbtsm/gotron-sdk/pkg/address"
@@ -21,11 +20,11 @@ var (
 
 type Monitor struct {
 	*chain.Common
-	conn                             *Connection
-	heightCount                      int64
+	conn                  *Connection
+	heightCount           int64
 	balance, syncedHeight *big.Int
-	timestamp                        int64
-	balMapping                       map[string]float64
+	timestamp             int64
+	balMapping            map[string]float64
 }
 
 func NewMonitor(cs *chain.Common, tronConn *Connection) *Monitor {
@@ -87,7 +86,9 @@ func (m *Monitor) sync() error {
 				m.checkToken(common.HexToAddress(ct.Address), ct.Tokens)
 			}
 
-			time.Sleep(config.BalanceRetryInterval)
+			if !chain.SleepWithStop(m.Stop, config.BalanceRetryInterval) {
+				return errors.New("polling terminated")
+			}
 		}
 	}
 }
