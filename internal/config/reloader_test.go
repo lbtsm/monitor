@@ -1,10 +1,12 @@
 package config
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
 
 // helper: minimal valid Config (must contain a "map" chain).
@@ -208,5 +210,37 @@ func TestReloadFromFile_AllowsAddRemoveChain(t *testing.T) {
 	path2 := writeJSON(t, dir, "config-rm.json", removed)
 	if err := ReloadFromFile(store, path2); err != nil {
 		t.Fatalf("removing a chain should be allowed: %v", err)
+	}
+}
+
+func TestWatchSignals_ReloadsWhenConfigFileChanges(t *testing.T) {
+	dir := t.TempDir()
+	old := validRawConfig()
+	old.Chains[1].Opts = map[string]string{WaterLine: "50"}
+	path := writeJSON(t, dir, "config.json", old)
+
+	store := NewStore(&old)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go WatchSignals(ctx, store, path)
+	time.Sleep(100 * time.Millisecond)
+
+	updated := validRawConfig()
+	updated.Chains[1].Opts = map[string]string{WaterLine: "5"}
+	writeJSON(t, dir, "config.json", updated)
+
+	deadline := time.After(2 * time.Second)
+	tick := time.NewTicker(20 * time.Millisecond)
+	defer tick.Stop()
+
+	for {
+		select {
+		case <-deadline:
+			t.Fatalf("timed out waiting for file reload, waterLine=%q", store.Load().Chains[1].Opts[WaterLine])
+		case <-tick.C:
+			if got := store.Load().Chains[1].Opts[WaterLine]; got == "5" {
+				return
+			}
+		}
 	}
 }
