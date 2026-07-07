@@ -9,9 +9,15 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
-	"github.com/ethereum/go-ethereum/log"
+	log "github.com/ChainSafe/log15"
+	"github.com/fsnotify/fsnotify"
 )
+
+var reloadLog = log.New("system", "config-reloader")
+
+const reloadDebounceInterval = 200 * time.Millisecond
 
 // ReloadFromFile reads cfgPath, validates the new configuration, rejects
 // changes to immutable fields, and atomically swaps the Store on success.
@@ -140,7 +146,9 @@ func optsValue(opts map[string]string, key string) string {
 	return opts[key]
 }
 
-// WatchSignals listens for SIGHUP and triggers ReloadFromFile each time.
+// WatchSignals listens for SIGHUP and config file changes, then triggers
+// ReloadFromFile. File events are debounced because many editors save by
+// writing several times or by replacing the file atomically.
 // It returns when ctx is cancelled. SIGINT/SIGTERM are intentionally NOT
 // handled here — the existing core.Start() owns process termination.
 func WatchSignals(ctx context.Context, store *Store, cfgPath string) {
@@ -148,16 +156,94 @@ func WatchSignals(ctx context.Context, store *Store, cfgPath string) {
 	signal.Notify(sigCh, syscall.SIGHUP)
 	defer signal.Stop(sigCh)
 
+	absCfgPath, err := filepath.Abs(cfgPath)
+	if err != nil {
+		reloadLog.Error("config watcher resolve path failed", "path", cfgPath, "err", err)
+		absCfgPath = cfgPath
+	}
+
+	var (
+		watcherEvents <-chan fsnotify.Event
+		watcherErrors <-chan error
+		watcher       *fsnotify.Watcher
+	)
+	watcher, err = fsnotify.NewWatcher()
+	if err != nil {
+		reloadLog.Error("config watcher init failed; SIGHUP reload still available", "err", err)
+	} else {
+		defer watcher.Close()
+		watchDir := filepath.Dir(absCfgPath)
+		if err := watcher.Add(watchDir); err != nil {
+			reloadLog.Error("config watcher add failed; SIGHUP reload still available", "path", watchDir, "err", err)
+		} else {
+			watcherEvents = watcher.Events
+			watcherErrors = watcher.Errors
+			reloadLog.Info("config watcher started", "path", absCfgPath)
+		}
+	}
+
+	var (
+		reloadTimer  *time.Timer
+		reloadTimerC <-chan time.Time
+	)
+	stopPendingReload := func() {
+		if reloadTimer == nil {
+			return
+		}
+		if !reloadTimer.Stop() {
+			select {
+			case <-reloadTimer.C:
+			default:
+			}
+		}
+		reloadTimerC = nil
+	}
+	scheduleReload := func() {
+		if reloadTimer == nil {
+			reloadTimer = time.NewTimer(reloadDebounceInterval)
+			reloadTimerC = reloadTimer.C
+			return
+		}
+		stopPendingReload()
+		reloadTimer.Reset(reloadDebounceInterval)
+		reloadTimerC = reloadTimer.C
+	}
+	reload := func(reason string) {
+		if err := ReloadFromFile(store, cfgPath); err != nil {
+			reloadLog.Error("config reload failed", "reason", reason, "err", err)
+			return
+		}
+		reloadLog.Info("config reloaded", "reason", reason)
+	}
+
 	for {
 		select {
 		case <-ctx.Done():
+			stopPendingReload()
 			return
 		case <-sigCh:
-			if err := ReloadFromFile(store, cfgPath); err != nil {
-				log.Error("config reload failed", "err", err)
-				continue
+			stopPendingReload()
+			reload("signal")
+		case event := <-watcherEvents:
+			if isConfigReloadEvent(event, absCfgPath) {
+				scheduleReload()
 			}
-			log.Info("config reloaded")
+		case err := <-watcherErrors:
+			reloadLog.Error("config watcher error", "err", err)
+		case <-reloadTimerC:
+			reloadTimerC = nil
+			reload("file")
 		}
 	}
+}
+
+func isConfigReloadEvent(event fsnotify.Event, cfgPath string) bool {
+	if event.Op&(fsnotify.Write|fsnotify.Create|fsnotify.Rename|fsnotify.Remove) == 0 {
+		return false
+	}
+	eventPath, err := filepath.Abs(event.Name)
+	if err != nil {
+		eventPath = event.Name
+	}
+	return filepath.Clean(eventPath) == filepath.Clean(cfgPath)
 }

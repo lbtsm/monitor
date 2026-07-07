@@ -9,6 +9,7 @@ require (
 	github.com/btcsuite/btcd/btcutil v1.1.0
 	github.com/cockroachdb/errors v1.11.3
 	github.com/ethereum/go-ethereum v1.17.2
+	github.com/fsnotify/fsnotify v1.6.0
 	github.com/gagliardetto/solana-go v1.12.0
 	github.com/lbtsm/gotron-sdk v0.0.0-20240606062614-534038e71cd3
 	github.com/lbtsm/mapo-lib v0.0.0-20260411112600-6643df794116
@@ -49,7 +50,6 @@ require (
 	github.com/eteu-technologies/golang-uint128 v1.1.2-eteu // indirect
 	github.com/ethereum/c-kzg-4844/v2 v2.1.6 // indirect
 	github.com/fatih/color v1.16.0 // indirect
-	github.com/fsnotify/fsnotify v1.6.0 // indirect
 	github.com/gagliardetto/binary v0.8.0 // indirect
 	github.com/gagliardetto/treeout v0.1.4 // indirect
 	github.com/gballet/go-libpcsclite v0.0.0-20191108122812-4678299bea08 // indirect
