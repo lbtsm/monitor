@@ -9,7 +9,10 @@ import (
 	"time"
 
 	"github.com/ChainSafe/log15"
+	"github.com/mapprotocol/monitor/internal/chain"
 	"github.com/mapprotocol/monitor/internal/config"
+	"github.com/mapprotocol/monitor/pkg/util"
+	"github.com/pkg/errors"
 )
 
 // energyQuerier is the chain-access surface the checker needs; *Connection
@@ -185,6 +188,41 @@ func formatEnergyRecovery(chainName string, en config.Energy, snap *EnergySnapsh
 		en.LookaheadHours, fmtEnergyInt(snap.ProtectedLookahead),
 		fmtEnergyInt(en.RecoveryThreshold),
 		fmtEnergyTime(snap.QueriedAtMs))
+}
+
+// energyExpiryTick is how often the scheduler wakes to check per-address due
+// times; actual scan cadence is each address's CheckIntervalMinutes.
+const energyExpiryTick = time.Minute
+
+// energyExpirySync schedules expiry scans for all enabled energy entries.
+// It re-reads the config snapshot every tick, so hot-reloaded thresholds and
+// newly added addresses are picked up without restart.
+func (m *Monitor) energyExpirySync() error {
+	checker := newExpiryChecker(m.Log, m.conn, m.Cfg.Name, m.Cfg.KeystorePath, util.Alarm)
+	nextRun := make(map[string]time.Time)
+	for {
+		select {
+		case <-m.Stop:
+			return errors.New("energy expiry polling terminated")
+		default:
+			snap := m.Snapshot()
+			for _, en := range snap.Energies {
+				if en.ProtectedThreshold <= 0 {
+					continue
+				}
+				en.ApplyExpiryDefaults()
+				now := time.Now()
+				if now.Before(nextRun[en.Address]) {
+					continue
+				}
+				checker.runOnce(en, now)
+				nextRun[en.Address] = now.Add(time.Duration(en.CheckIntervalMinutes) * time.Minute)
+			}
+			if !chain.SleepWithStop(m.Stop, energyExpiryTick) {
+				return errors.New("energy expiry polling terminated")
+			}
+		}
+	}
 }
 
 func formatEnergyFailure(chainName, addr string, fails int, scanErr error) string {

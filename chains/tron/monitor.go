@@ -47,6 +47,14 @@ func (m *Monitor) Sync() error {
 		}
 	}()
 
+	m.Wg.Add(1)
+	go func() {
+		defer m.Wg.Done()
+		if err := m.energyExpirySync(); err != nil {
+			m.Log.Error("Energy expiry polling stopped", "err", err)
+		}
+	}()
+
 	return nil
 }
 
