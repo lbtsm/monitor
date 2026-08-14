@@ -71,6 +71,35 @@ type ContractToken struct {
 type Energy struct {
 	Address   string `json:"address"`
 	Waterline int64  `json:"waterline"`
+	// Expiry monitoring (Stake 2.0 delegation lock). Disabled when
+	// ProtectedThreshold <= 0; remaining fields are defaulted by
+	// ApplyExpiryDefaults.
+	ProtectedThreshold   int64 `json:"protectedThreshold"`
+	RecoveryThreshold    int64 `json:"recoveryThreshold"`
+	LookaheadHours       int64 `json:"lookaheadHours"`
+	CheckIntervalMinutes int64 `json:"checkIntervalMinutes"`
+	RepeatIntervalHours  int64 `json:"repeatIntervalHours"`
+}
+
+// ApplyExpiryDefaults fills unset expiry-monitoring fields. No-op when the
+// feature is disabled (ProtectedThreshold <= 0).
+func (e *Energy) ApplyExpiryDefaults() {
+	if e.ProtectedThreshold <= 0 {
+		return
+	}
+	if e.RecoveryThreshold <= 0 {
+		// protected × 1.05, rounded up
+		e.RecoveryThreshold = e.ProtectedThreshold + (e.ProtectedThreshold+19)/20
+	}
+	if e.LookaheadHours <= 0 {
+		e.LookaheadHours = 72
+	}
+	if e.CheckIntervalMinutes <= 0 {
+		e.CheckIntervalMinutes = 60
+	}
+	if e.RepeatIntervalHours <= 0 {
+		e.RepeatIntervalHours = 12
+	}
 }
 
 type EthToken struct {
