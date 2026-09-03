@@ -6,7 +6,8 @@ whether the transaction is cross-chain, and the user balance
 
 # Configuration
 
-See `config.example` for an example configuration.
+Use a valid `config.json` for runtime configuration. Keep production config
+files and keystores out of git.
 
 ## Options
 
@@ -42,6 +43,34 @@ Scan failures alarm separately as "监控异常" and never count as zero energy.
 
 ## Env
 
-```shell 
-export hooks="https://hooks.slack.com/services/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" // Slack alarm hook, Apply See This https://api.slack.com/messaging/webhooks
+```shell
+export hooks="https://hooks.slack.com/services/xxx/yyy/zzz"
 ```
+
+# Docker Deployment
+
+The container uses `/app/runtime` as its runtime directory. Map one host
+directory to it and keep `config.json`, `keys/`, and generated state files in
+that host directory.
+
+```shell
+sudo mkdir -p /opt/bridge-monitor/keys
+sudo cp /path/to/your/config.json /opt/bridge-monitor/config.json
+
+cp .env.example .env
+vim .env
+
+docker compose up -d --build
+docker compose logs -f bridge-monitor
+```
+
+After pulling updates on the server:
+
+```shell
+git pull
+docker compose up -d --build
+```
+
+GitHub Actions builds and tests the project on pull requests, and builds the
+Docker image on pushes to `main`, `master`, or version tags. Non-PR builds are
+published to GitHub Container Registry as `ghcr.io/<owner>/<repo>:<branch-or-tag>`.

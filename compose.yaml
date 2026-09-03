@@ -1,0 +1,17 @@
+services:
+  bridge-monitor:
+    build:
+      context: .
+      args:
+        VERSION: ${MONITOR_VERSION:-local}
+    image: ${MONITOR_IMAGE:-bridge-monitor:local}
+    container_name: ${MONITOR_CONTAINER_NAME:-bridge-monitor}
+    restart: unless-stopped
+    working_dir: /app/runtime
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      compass: ${compass:-}
+      hooks: ${hooks:-}
+    volumes:
+      - ${MONITOR_DATA_DIR:-/opt/bridge-monitor}:/app/runtime
+    command: ["monitor", "--config", "/app/runtime/config.json"]
