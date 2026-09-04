@@ -6,8 +6,21 @@ FROM golang:${GO_VERSION}-bookworm AS builder
 
 WORKDIR /src
 
+ARG GOPRIVATE=github.com/lbtsm/*
+ENV GOPRIVATE=${GOPRIVATE}
+ENV GONOSUMDB=${GOPRIVATE}
+
 COPY go.mod go.sum ./
-RUN go mod download
+RUN --mount=type=secret,id=github_token \
+    set -eu; \
+    cleanup() { rm -f /root/.netrc; }; \
+    trap cleanup EXIT; \
+    if [ -s /run/secrets/github_token ]; then \
+      token="$(cat /run/secrets/github_token)"; \
+      printf "machine github.com\nlogin x-access-token\npassword %s\n" "$token" > /root/.netrc; \
+      chmod 0600 /root/.netrc; \
+    fi; \
+    go mod download
 
 COPY . .
 

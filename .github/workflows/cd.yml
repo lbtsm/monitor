@@ -21,6 +21,8 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  GOPRIVATE: github.com/lbtsm/*
+  GONOSUMDB: github.com/lbtsm/*
 
 jobs:
   test:
@@ -35,6 +37,17 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+
+      - name: Configure private Go module access
+        env:
+          LBTSM_REPO_TOKEN: ${{ secrets.LBTSM_REPO_TOKEN }}
+        run: |
+          if [ -z "$LBTSM_REPO_TOKEN" ]; then
+            echo "::warning::LBTSM_REPO_TOKEN is not set; private github.com/lbtsm modules must be public or Go module download will fail."
+            exit 0
+          fi
+          printf "machine github.com\nlogin x-access-token\npassword %s\n" "$LBTSM_REPO_TOKEN" > ~/.netrc
+          chmod 0600 ~/.netrc
 
       - name: Run unit tests
         run: go test ./internal/... ./chains/tron ./pkg/monitor
@@ -65,6 +78,7 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
             type=ref,event=tag
             type=sha,prefix=sha-
@@ -86,5 +100,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             VERSION=${{ github.ref_name }}
+            GOPRIVATE=${{ env.GOPRIVATE }}
+          secrets: |
+            github_token=${{ secrets.LBTSM_REPO_TOKEN }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -4,6 +4,8 @@ services:
       context: .
       args:
         VERSION: ${MONITOR_VERSION:-local}
+      secrets:
+        - github_token
     image: ${MONITOR_IMAGE:-bridge-monitor:local}
     container_name: ${MONITOR_CONTAINER_NAME:-bridge-monitor}
     restart: unless-stopped
@@ -15,3 +17,7 @@ services:
     volumes:
       - ${MONITOR_DATA_DIR:-/opt/bridge-monitor}:/app/runtime
     command: ["monitor", "--config", "/app/runtime/config.json"]
+
+secrets:
+  github_token:
+    environment: LBTSM_REPO_TOKEN

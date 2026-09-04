@@ -64,6 +64,14 @@ docker compose up -d --build
 docker compose logs -f bridge-monitor
 ```
 
+If the `github.com/lbtsm/*` Go modules are private, set a GitHub token with
+read access before building locally:
+
+```shell
+export LBTSM_REPO_TOKEN="github_pat_xxx"
+docker compose up -d --build
+```
+
 After pulling updates on the server:
 
 ```shell
@@ -74,3 +82,7 @@ docker compose up -d --build
 GitHub Actions builds and tests the project on pull requests, and builds the
 Docker image on pushes to `main`, `master`, or version tags. Non-PR builds are
 published to GitHub Container Registry as `ghcr.io/<owner>/<repo>:<branch-or-tag>`.
+The default branch also publishes `ghcr.io/<owner>/<repo>:latest`.
+
+For private `github.com/lbtsm/*` dependencies, add a repository secret named
+`LBTSM_REPO_TOKEN` with read access to the private dependency repositories.
