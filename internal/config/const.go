@@ -44,7 +44,6 @@ var (
 	ChangeInterval   = "changeInterval"
 	CheckHeightCount = "checkHeightCount"
 	ApiUrl           = "apiUrl"
-	SyncHeightAlarm  = "syncHeightAlarm"
 )
 
 const (

@@ -16,7 +16,6 @@ See `config.example` for an example configuration.
   "waterLine": "5000000000000000000",                     // If the user balance is lower than, an alarm will be triggered, unit : wei
   "changeInterval": "3000",                               // How long does the lightnode height remain unchanged, triggering the alarm, use for near unit : seconds
   "checkHeightCount": "20",                               // How long does the lightnode height not change remain unchanged, triggering the alarm, default 15
-  "syncHeightAlarm": "false",                              // Optional: disable other-chain-to-map sync height alarm, default true
 }
 ```
 
