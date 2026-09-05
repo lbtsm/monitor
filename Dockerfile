@@ -25,7 +25,9 @@ RUN --mount=type=secret,id=github_token \
 COPY . .
 
 ARG VERSION=dev
-RUN go build -trimpath -ldflags="-s -w -X main.Version=${VERSION}" -o /out/bridge-monitor ./cmd
+ARG COMMIT_ID=""
+ARG BUILD_TIME=""
+RUN go build -trimpath -ldflags="-s -w -X main.Version=${VERSION} -X main.CommitID=${COMMIT_ID} -X main.BuildTime=${BUILD_TIME}" -o /out/bridge-monitor ./cmd
 
 FROM debian:bookworm-slim AS runtime
 

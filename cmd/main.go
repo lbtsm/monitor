@@ -1,17 +1,36 @@
 package main
 
 import (
+	"fmt"
+	"os"
+	"strings"
+
 	log "github.com/ChainSafe/log15"
 	"github.com/mapprotocol/monitor/internal/config"
 	"github.com/urfave/cli/v2"
-	"os"
 )
 
 var app = cli.NewApp()
 
 var (
-	Version = "1.0.0"
+	Version   = "1.0.0"
+	CommitID  = ""
+	BuildTime = ""
 )
+
+func formatVersion(version, commitID, buildTime string) string {
+	parts := make([]string, 0, 2)
+	if commitID != "" {
+		parts = append(parts, fmt.Sprintf("commitId=%s", commitID))
+	}
+	if buildTime != "" {
+		parts = append(parts, fmt.Sprintf("buildTime=%s", buildTime))
+	}
+	if len(parts) == 0 {
+		return version
+	}
+	return fmt.Sprintf("%s (%s)", version, strings.Join(parts, ", "))
+}
 
 // init initializes CLI
 func init() {
@@ -20,7 +39,7 @@ func init() {
 	app.Name = "compass"
 	app.Usage = "Compass"
 	app.Authors = []*cli.Author{{Name: "MAP Protocol 2021"}}
-	app.Version = Version
+	app.Version = formatVersion(Version, CommitID, BuildTime)
 	app.EnableBashCompletion = true
 	app.Commands = []*cli.Command{
 		&monitorCommand,

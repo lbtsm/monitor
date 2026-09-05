@@ -4,6 +4,8 @@ services:
       context: .
       args:
         VERSION: ${MONITOR_VERSION:-local}
+        COMMIT_ID: ${MONITOR_COMMIT_ID:-}
+        BUILD_TIME: ${MONITOR_BUILD_TIME:-}
       secrets:
         - github_token
     image: ${MONITOR_IMAGE:-bridge-monitor:local}

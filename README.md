@@ -44,6 +44,14 @@ docker compose up -d --build
 docker compose logs -f bridge-monitor
 ```
 
+To include local build metadata with Docker Compose:
+
+```shell
+export MONITOR_COMMIT_ID="$(git rev-parse HEAD)"
+export MONITOR_BUILD_TIME="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+docker compose up -d --build
+```
+
 If the `github.com/lbtsm/*` Go modules are private, set a GitHub token with
 read access before building locally:
 
