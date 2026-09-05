@@ -515,20 +515,25 @@ func (m *Monitor) nativeCheck(contract string) {
 }
 
 func (m *Monitor) OtherChainCheck() {
-	if m.Cfg.LightNode == config.ZeroAddress {
+	snap := m.Snapshot()
+	if !snap.SyncHeightAlarm {
+		m.heightCount = 0
 		return
 	}
-	height, err := mapprotocol.Get2MapHeight(m.Cfg.Id)
+	if snap.LightNode == config.ZeroAddress {
+		return
+	}
+	height, err := mapprotocol.Get2MapHeight(snap.Id)
 	m.Log.Info("Check Height", "syncHeight", height, "record", m.syncedHeight, "heightCount", m.heightCount)
 	if err != nil {
 		m.Log.Error("get2MapHeight failed", "err", err)
 	} else {
 		if m.syncedHeight.Uint64() == height.Uint64() {
 			m.heightCount = m.heightCount + 1
-			if m.heightCount >= m.Cfg.CheckHgtCount {
+			if m.heightCount >= snap.CheckHgtCount {
 				util.Alarm(context.Background(),
 					fmt.Sprintf("Sync Height No change within %d minutes chains=%s, height=%d",
-						m.Cfg.CheckHgtCount, m.Cfg.Name, height.Uint64()))
+						snap.CheckHgtCount, snap.Name, height.Uint64()))
 			}
 		} else {
 			m.heightCount = 0

@@ -15,20 +15,21 @@ func TestApplyHotReloadable_OverwritesAllReloadableFields(t *testing.T) {
 	oldTss := &Tss{Maintainer: "old-maint"}
 
 	target := &OptConfig{
-		Name:          "bsc",
-		Id:            56,
-		Endpoint:      "http://old", // immutable, must NOT be touched
-		KeystorePath:  "/keys/old",  // immutable
-		WaterLine:     "100",
-		From:          []string{"0xold"},
-		Users:         []From{{Group: "g1", From: "0xa"}},
-		ContractToken: []ContractToken{{Address: "0xold-ct"}},
-		Energies:      []Energy{{Address: "old-en"}},
-		Tss:           oldTss,
-		Tk:            oldTk,
-		Genni:         oldGenni,
-		LightNode:     common.HexToAddress("0xaaaa"),
-		ApiUrl:        "old-api",
+		Name:            "bsc",
+		Id:              56,
+		Endpoint:        "http://old", // immutable, must NOT be touched
+		KeystorePath:    "/keys/old",  // immutable
+		WaterLine:       "100",
+		From:            []string{"0xold"},
+		Users:           []From{{Group: "g1", From: "0xa"}},
+		ContractToken:   []ContractToken{{Address: "0xold-ct"}},
+		Energies:        []Energy{{Address: "old-en"}},
+		Tss:             oldTss,
+		Tk:              oldTk,
+		Genni:           oldGenni,
+		LightNode:       common.HexToAddress("0xaaaa"),
+		ApiUrl:          "old-api",
+		SyncHeightAlarm: true,
 	}
 
 	newTk := &Token{BridgeAddr: "new-bridge"}
@@ -36,20 +37,21 @@ func TestApplyHotReloadable_OverwritesAllReloadableFields(t *testing.T) {
 	newTss := &Tss{Maintainer: "new-maint"}
 
 	source := &OptConfig{
-		Name:          "bsc",
-		Id:            56,
-		Endpoint:      "http://new", // ignored
-		KeystorePath:  "/keys/new",  // ignored
-		WaterLine:     "200",
-		From:          []string{"0xnew"},
-		Users:         []From{{Group: "g2", From: "0xb"}},
-		ContractToken: []ContractToken{{Address: "0xnew-ct"}},
-		Energies:      []Energy{{Address: "new-en"}},
-		Tss:           newTss,
-		Tk:            newTk,
-		Genni:         newGenni,
-		LightNode:     common.HexToAddress("0xbbbb"),
-		ApiUrl:        "new-api",
+		Name:            "bsc",
+		Id:              56,
+		Endpoint:        "http://new", // ignored
+		KeystorePath:    "/keys/new",  // ignored
+		WaterLine:       "200",
+		From:            []string{"0xnew"},
+		Users:           []From{{Group: "g2", From: "0xb"}},
+		ContractToken:   []ContractToken{{Address: "0xnew-ct"}},
+		Energies:        []Energy{{Address: "new-en"}},
+		Tss:             newTss,
+		Tk:              newTk,
+		Genni:           newGenni,
+		LightNode:       common.HexToAddress("0xbbbb"),
+		ApiUrl:          "new-api",
+		SyncHeightAlarm: false,
 	}
 
 	ApplyHotReloadable(target, source)
@@ -83,6 +85,9 @@ func TestApplyHotReloadable_OverwritesAllReloadableFields(t *testing.T) {
 	}
 	if target.ApiUrl != "new-api" {
 		t.Errorf("ApiUrl = %q, want new-api", target.ApiUrl)
+	}
+	if target.SyncHeightAlarm {
+		t.Error("SyncHeightAlarm = true, want false")
 	}
 }
 

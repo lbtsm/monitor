@@ -284,50 +284,52 @@ func loadConfig(file string, config *Config) error {
 }
 
 type OptConfig struct {
-	Name           string   // Human-readable chain name
-	Id             ChainId  // ChainID
-	Endpoint       string   // url for rpc endpoint
-	From           []string // address of key to use
-	KeystorePath   string   // Location of keyfiles
-	GasLimit       *big.Int
-	MaxGasPrice    *big.Int
-	GasMultiplier  *big.Float
-	WaterLine      string
-	ChangeInterval string
-	ApiUrl         string
-	StartBlock     *big.Int
-	MapChainID     ChainId
-	LightNode      common.Address // the lightnode to sync header
-	Tk             *Token
-	Genni          *Api
-	CheckHgtCount  int64
-	Users          []From
-	ContractToken  []ContractToken
-	Energies       []Energy
-	Tss            *Tss
+	Name            string   // Human-readable chain name
+	Id              ChainId  // ChainID
+	Endpoint        string   // url for rpc endpoint
+	From            []string // address of key to use
+	KeystorePath    string   // Location of keyfiles
+	GasLimit        *big.Int
+	MaxGasPrice     *big.Int
+	GasMultiplier   *big.Float
+	WaterLine       string
+	ChangeInterval  string
+	ApiUrl          string
+	StartBlock      *big.Int
+	MapChainID      ChainId
+	LightNode       common.Address // the lightnode to sync header
+	Tk              *Token
+	Genni           *Api
+	CheckHgtCount   int64
+	SyncHeightAlarm bool
+	Users           []From
+	ContractToken   []ContractToken
+	Energies        []Energy
+	Tss             *Tss
 }
 
 // ParseOptConfig uses a core.ChainConfig to construct a corresponding Config
 func ParseOptConfig(chainCfg *ChainConfig, tks *Token, genni *Api, users []From) (*OptConfig, error) {
 	config := &OptConfig{
-		Id:             chainCfg.Id,
-		From:           strings.Split(chainCfg.From, ","),
-		Name:           chainCfg.Name,
-		Endpoint:       chainCfg.Endpoint,
-		KeystorePath:   DefaultKeystorePath,
-		WaterLine:      "",
-		ChangeInterval: "",
-		StartBlock:     big.NewInt(0),
-		GasLimit:       big.NewInt(DefaultGasLimit),
-		MaxGasPrice:    big.NewInt(DefaultGasPrice),
-		GasMultiplier:  big.NewFloat(DefaultGasMultiplier),
-		Tk:             tks,
-		Genni:          genni,
-		CheckHgtCount:  DefaultCheckHgtCount,
-		ContractToken:  chainCfg.ContractToken,
-		Energies:       chainCfg.Energies,
-		Users:          users,
-		Tss:            chainCfg.Tss,
+		Id:              chainCfg.Id,
+		From:            strings.Split(chainCfg.From, ","),
+		Name:            chainCfg.Name,
+		Endpoint:        chainCfg.Endpoint,
+		KeystorePath:    DefaultKeystorePath,
+		WaterLine:       "",
+		ChangeInterval:  "",
+		StartBlock:      big.NewInt(0),
+		GasLimit:        big.NewInt(DefaultGasLimit),
+		MaxGasPrice:     big.NewInt(DefaultGasPrice),
+		GasMultiplier:   big.NewFloat(DefaultGasMultiplier),
+		Tk:              tks,
+		Genni:           genni,
+		CheckHgtCount:   DefaultCheckHgtCount,
+		SyncHeightAlarm: true,
+		ContractToken:   chainCfg.ContractToken,
+		Energies:        chainCfg.Energies,
+		Users:           users,
+		Tss:             chainCfg.Tss,
 	}
 
 	if chainCfg.NearKeystorePath != "" {
@@ -365,6 +367,14 @@ func ParseOptConfig(chainCfg *ChainConfig, tks *Token, genni *Api, users []From)
 			return nil, err
 		}
 		config.CheckHgtCount = int64(count)
+	}
+
+	if syncHeightAlarm, ok := chainCfg.Opts[SyncHeightAlarm]; ok && syncHeightAlarm != "" {
+		enabled, err := strconv.ParseBool(syncHeightAlarm)
+		if err != nil {
+			return nil, fmt.Errorf("%s must be boolean: %w", SyncHeightAlarm, err)
+		}
+		config.SyncHeightAlarm = enabled
 	}
 
 	return config, nil

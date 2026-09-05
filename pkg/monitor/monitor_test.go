@@ -1,10 +1,14 @@
 package monitor
 
 import (
+	"math/big"
 	"testing"
 
+	"github.com/ChainSafe/log15"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/mapprotocol/monitor/internal/chain"
 	"github.com/mapprotocol/monitor/internal/config"
+	"github.com/mapprotocol/monitor/internal/mapprotocol"
 )
 
 // TestPrepareTick_ReadsLatestWaterLine: each call to prepareTick should
@@ -55,5 +59,38 @@ func TestPrepareTick_SnapshotIsIndependent(t *testing.T) {
 
 	if snap.WaterLine != "100" {
 		t.Fatalf("snapshot mutated retroactively, WaterLine=%q", snap.WaterLine)
+	}
+}
+
+func TestOtherChainCheck_SkipsWhenSyncHeightAlarmDisabled(t *testing.T) {
+	original := mapprotocol.Get2MapHeight
+	defer func() {
+		mapprotocol.Get2MapHeight = original
+	}()
+
+	called := false
+	mapprotocol.Get2MapHeight = func(chainID config.ChainId) (*big.Int, error) {
+		called = true
+		return big.NewInt(0), nil
+	}
+
+	cfg := &config.OptConfig{
+		Name:            "klaytn",
+		Id:              8217,
+		LightNode:       common.HexToAddress("0x0000000000000000000000000000000000000001"),
+		CheckHgtCount:   1000,
+		SyncHeightAlarm: false,
+	}
+	m := New(chain.NewCommonSync(nil, cfg, log15.New(), nil, nil))
+	m.heightCount = 99
+	m.syncedHeight = big.NewInt(123)
+
+	m.OtherChainCheck()
+
+	if called {
+		t.Fatal("Get2MapHeight was called, want skipped when SyncHeightAlarm=false")
+	}
+	if m.heightCount != 0 {
+		t.Fatalf("heightCount = %d, want reset to 0", m.heightCount)
 	}
 }

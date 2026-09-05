@@ -23,6 +23,7 @@ func ApplyHotReloadable(target, source *OptConfig) {
 	target.WaterLine = source.WaterLine
 	target.LightNode = source.LightNode
 	target.ApiUrl = source.ApiUrl
+	target.SyncHeightAlarm = source.SyncHeightAlarm
 	target.From = source.From
 	target.Users = source.Users
 	target.ContractToken = source.ContractToken

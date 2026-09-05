@@ -99,6 +99,24 @@ func TestDiffChains_DataOnlyChangeUpdates(t *testing.T) {
 	}
 }
 
+func TestDiffChains_SyncHeightAlarmChangeUpdates(t *testing.T) {
+	old := []RawChainConfig{chainMAP(), chainBSC(func(c *RawChainConfig) {
+		c.Opts = map[string]string{SyncHeightAlarm: "true"}
+	})}
+	new := []RawChainConfig{chainMAP(), chainBSC(func(c *RawChainConfig) {
+		c.Opts = map[string]string{SyncHeightAlarm: "false"}
+	})}
+
+	d := DiffChains(old, new)
+
+	if got := names(d.Updates); !reflect.DeepEqual(got, []string{"bsc"}) {
+		t.Errorf("Updates = %v, want [bsc]", got)
+	}
+	if len(d.Restarts) != 0 {
+		t.Errorf("did not expect Restarts for syncHeightAlarm change")
+	}
+}
+
 func TestDiffChains_NoChangeProducesEmptyDiff(t *testing.T) {
 	chains := []RawChainConfig{chainMAP(), chainBSC()}
 	d := DiffChains(chains, chains)
@@ -111,15 +129,15 @@ func TestDiffChains_MixedAddRemoveRestartUpdate(t *testing.T) {
 	old := []RawChainConfig{
 		chainMAP(),
 		chainBSC(),
-		{Name: "tron", Id: "728126428", Endpoint: "http://tron.old"},     // restart candidate
-		{Name: "old-chain", Id: "999", Endpoint: "http://x"},             // remove
+		{Name: "tron", Id: "728126428", Endpoint: "http://tron.old"},       // restart candidate
+		{Name: "old-chain", Id: "999", Endpoint: "http://x"},               // remove
 		{Name: "eth", Id: "1", Endpoint: "u", Users: []From{{Group: "g"}}}, // update
 	}
 	new := []RawChainConfig{
 		chainMAP(),
 		chainBSC(),
-		{Name: "tron", Id: "728126428", Endpoint: "http://tron.NEW"}, // restart
-		{Name: "new-chain", Id: "100", Endpoint: "http://y"},         // add
+		{Name: "tron", Id: "728126428", Endpoint: "http://tron.NEW"},        // restart
+		{Name: "new-chain", Id: "100", Endpoint: "http://y"},                // add
 		{Name: "eth", Id: "1", Endpoint: "u", Users: []From{{Group: "g2"}}}, // update
 	}
 

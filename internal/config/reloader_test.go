@@ -159,6 +159,24 @@ func TestReloadFromFile_RejectsChangeIntervalChange(t *testing.T) {
 	}
 }
 
+func TestReloadFromFile_AllowsSyncHeightAlarmChange(t *testing.T) {
+	dir := t.TempDir()
+	old := validRawConfig()
+	old.Chains[1].Opts = map[string]string{SyncHeightAlarm: "true"}
+	store := NewStore(&old)
+
+	updated := validRawConfig()
+	updated.Chains[1].Opts = map[string]string{SyncHeightAlarm: "false"}
+	path := writeJSON(t, dir, "config.json", updated)
+
+	if err := ReloadFromFile(store, path); err != nil {
+		t.Fatalf("syncHeightAlarm change should be allowed, got error: %v", err)
+	}
+	if got := store.Load().Chains[1].Opts[SyncHeightAlarm]; got != "false" {
+		t.Fatalf("syncHeightAlarm = %q, want false", got)
+	}
+}
+
 func TestReloadFromFile_RejectsNameRenameWithoutIdChange(t *testing.T) {
 	// pure rename (chain.id stays same, only name flips) is rejected
 	dir := t.TempDir()
